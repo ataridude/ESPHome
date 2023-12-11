@@ -1,0 +1,24 @@
+sensor:
+  - platform: template
+    sensors:
+      wx_forecast:
+        friendly_name: "Local forecast"
+        value_template: >-
+            {% set weather = {
+               "sunny": "sunny",
+               "clear-day": "clear-day", 
+               "clear-night": "clear-night", 
+               "cloudy": "cloudy", 
+               "rainy": "rainy", 
+               "sleet": "sleet", 
+               "snow": "snow", 
+               "wind": "wind", 
+               "fog": "fog", 
+               "partlycloudy": "partlycloudy", 
+             } %}
+
+             {% for state in states.weather.forecast_home.attributes.forecast[1:6] -%}
+
+             {{ as_timestamp(state.datetime)| timestamp_custom("%a") }};{{state.templow}};{{ state.temperature }};{{ state.precipitation }}in;{{ weather[state.condition] }}#
+
+             {%- endfor %}

@@ -1,0 +1,139 @@
+esphome:
+  name: esphome-web-6a0ed4
+  friendly_name: m5stack
+
+esp32:
+  board: esp32dev
+  framework:
+    type: arduino
+
+# Enable logging
+logger:
+  logs:
+    component: ERROR
+
+# Enable Home Assistant API
+api:
+  encryption:
+    key: !secret api_encryption_key
+
+ota:
+
+
+wifi:
+  ssid: !secret wifi_ssid
+  password: !secret wifi_password
+
+  # Enable fallback hotspot (captive portal) in case wifi connection fails
+  ap:
+    ssid: "Esphome-Web-6A0Ed4"
+    password: "5KIH83RRD2aH"
+
+captive_portal:
+    
+spi:
+  clk_pin: 18
+  mosi_pin: 23
+  miso_pin: 19
+
+color:
+  - id: my_red
+    red: 100%
+    green: 3%
+    blue: 5%
+
+font:
+  - file: "Roboto-Medium.ttf"
+    id: font_roboto_medium22
+    size: 22
+    glyphs: '!"%()+,-_.:°0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ abcdefghijklmnopqrstuvwxyz/³µ'
+
+text_sensor:
+  - platform: homeassistant
+    id: w_forecast
+    entity_id: sensor.wx_forecast
+
+display:
+  - platform: ili9xxx
+    model: M5STACK
+    cs_pin: 14
+    dc_pin: 27
+    reset_pin: 33
+    rotation: 0
+    update_interval: 1s
+    lambda: |-
+      std::string fivedays = id(w_forecast).state;
+      std::vector<std::string> five;
+      std::vector<std::string> v;
+
+      ESP_LOGD("fivedays [%s]", fivedays.c_str());
+      five.clear();
+
+      int count = 0;
+      int wx = 0; // start positio x
+      int wy = 0; // start position y
+      char *token = strtok(const_cast<char*>(fivedays.c_str()), "#");
+      // this while splits the string (I believe, I "found" the code)
+      while (token != NULL)
+        {
+          five.push_back(token);
+          token = strtok (NULL, "#");
+        }
+        // here we loop the days
+        for ( std::string fiv : five ) {
+          //it.rectangle(0, wy, 128, 59);  // adds a border around the "day"
+          //it.rectangle(1, wy+1, 126, 57);
+
+          std::string str = "";
+          str = fiv;
+          ESP_LOGD("test: ", "String to Vector: %s", str.c_str());
+          v.clear();
+          token = strtok (&str[0],";");
+          while (token != NULL)
+          {
+            v.push_back(token);
+            token = strtok (NULL, ";");
+          }
+          // this is the loop for each value in the "day"
+          for ( std::string s : v ) {
+            if(count == 0){
+              // Day (Mon/Tue...)
+              it.printf(wx, wy, id(font_roboto_medium22), id(my_red), TextAlign::TOP_LEFT, "%s", s.c_str());
+            }else if(count == 1){
+              // Temperature
+              it.printf(wx +60, wy, id(font_roboto_medium22), id(my_red), TextAlign::TOP_LEFT, "%s", s.c_str());
+            }else if(count == 2){
+              // Precipitation
+              it.printf(wx +100, wy, id(font_roboto_medium22), id(my_red), TextAlign::TOP_LEFT, "%s", s.c_str());
+            }else if(count == 3){
+              // weather icon
+              it.printf(wx + 135, wy, id(font_roboto_medium22), id(my_red), TextAlign::TOP_LEFT, "%s", s.c_str());
+            }else if(count == 4){
+              // weather icon
+              it.printf(wx + 210, wy, id(font_roboto_medium22), id(my_red), TextAlign::TOP_LEFT, "%s", s.c_str());
+            }
+
+            ESP_LOGD("test: ", "String to Vector: %s", s.c_str());
+            count += 1;
+          }
+          count = 0;
+          wy += 25; // move down 59 pixels and output next day
+        }
+
+binary_sensor:
+  - platform: gpio
+    id: M5_BtnB
+    pin:
+      number: 38
+      inverted: true
+    on_click:
+      then:
+        - switch.toggle: backlight
+
+# GPIO pin of the display backlight
+switch:
+  - platform: gpio
+    pin: 32
+    name: "Backlight"
+    id: backlight
+    restore_mode: ALWAYS_ON
